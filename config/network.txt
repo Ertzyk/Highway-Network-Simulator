@@ -1,0 +1,7 @@
+# Highway Network Configuration
+# Format: Node_A Node_B Base_Travel_Time
+0 1 45
+1 2 120
+0 3 60
+3 2 110
+2 4 90
