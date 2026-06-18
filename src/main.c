@@ -17,7 +17,7 @@ shared_state_t *shared_data = NULL;
 pid_t child_pids[MAX_NODES];
 int num_children = 0;
 int total_network_nodes = 0;
-int my_node_id = -1;
+int my_node_id = -1; // Zmienna globalna dla dziecka (żeby handler sygnału wiedział, kim jest)
 
 extern int get_next_hop(shared_state_t *state, int current_node, int dest_node, int total_nodes);
 
@@ -38,7 +38,7 @@ typedef struct {
 thread_pool_t local_pool;
 
 void cleanup_and_exit(int sig) {
-    printf("\n[Dyspozytor] Przechwycono sygnał %d. Rozpoczęto zamykanie systemu...\n", sig);
+    printf("\n[Dyspozytor] Przechwycono sygnał %d. Rozpoczęto zamykanie systemu\n", sig);
     
     for (int i = 0; i < num_children; i++) {
         kill(child_pids[i], SIGTERM);
@@ -61,8 +61,9 @@ void cleanup_and_exit(int sig) {
     exit(0);
 }
 
+// Handler Sygnału dla Węzła (Symulacja Wypadku)
 void handle_traffic_jam(int sig) {
-    (void)sig;
+    (void)sig; // Ignorujemy ostrzeżenie kompilatora o nieużywanej zmiennej
     
     if (my_node_id == -1 || shared_data == NULL) return;
 
@@ -75,8 +76,9 @@ void handle_traffic_jam(int sig) {
     }
 
     if (target_neighbor != -1) {
+        // Blokujemy pamięć i zmieniamy wagę grafu (+1000 symuluje ogromny korek)
         sem_wait(&shared_data->global_lock);
-        
+
         shared_data->edge_weights[my_node_id][target_neighbor] += 1000;
         shared_data->edge_weights[target_neighbor][my_node_id] += 1000;
         
@@ -158,7 +160,7 @@ void intersection_routine(int node_id) {
         pthread_create(&threads[i], NULL, worker_thread_logic, thread_id);
     }
     
-    printf("[Węzeł %d] Uruchomiono. Utworzono %d wątków roboczych. Nasłuchuję...\n", node_id, NUM_WORKER_THREADS);
+    printf("[Węzeł %d] Uruchomiono. Utworzono %d wątków roboczych.\n", node_id, NUM_WORKER_THREADS);
     
     vehicle_msg_t incoming_car;
     long my_msg_type = node_id + 1; 
@@ -176,7 +178,7 @@ void intersection_routine(int node_id) {
                 
                 pthread_cond_signal(&local_pool.data_ready);
             } else {
-                printf("[Węzeł %d] ⚠️ Przepełnienie kolejki! Pojazd %d odrzucony.\n", node_id, incoming_car.vehicle_id);
+                printf("[Węzeł %d] Przepełnienie kolejki. Pojazd %d odrzucony.\n", node_id, incoming_car.vehicle_id);
             }
             
             pthread_mutex_unlock(&local_pool.lock);
